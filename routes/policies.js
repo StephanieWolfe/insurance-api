@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { customerSchema, vehicleSchema, quoteSchema, policySchema } = require('../validation');
 
 // --- Premium calculation logic ---
 function calculatePremium(dateOfBirth, vehicleYear, vehicleValue, coverageType) {
@@ -8,21 +9,17 @@ function calculatePremium(dateOfBirth, vehicleYear, vehicleValue, coverageType) 
     (Date.now() - new Date(dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
   );
 
-  // Base rate by coverage type
   const baseRates = { liability: 40, collision: 65, full: 95 };
   let premium = baseRates[coverageType];
 
-  // Age factor — under-25 and over-70 carry higher risk in real underwriting
   if (age < 25) premium *= 1.6;
   else if (age >= 25 && age <= 65) premium *= 1.0;
   else premium *= 1.25;
 
-  // Vehicle age factor — older cars cost less to insure for collision/full
   const vehicleAge = new Date().getFullYear() - vehicleYear;
   if (vehicleAge > 10) premium *= 0.85;
   else if (vehicleAge < 2) premium *= 1.1;
 
-  // Vehicle value factor — higher value increases collision/full cost
   if (coverageType !== 'liability') {
     premium += vehicleValue * 0.002;
   }
@@ -32,7 +29,12 @@ function calculatePremium(dateOfBirth, vehicleYear, vehicleValue, coverageType) 
 
 // --- Create a customer ---
 router.post('/customers', async (req, res) => {
-  const { first_name, last_name, date_of_birth, email } = req.body;
+  const parsed = customerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { first_name, last_name, date_of_birth, email } = parsed.data;
+
   try {
     const result = await pool.query(
       `INSERT INTO customers (first_name, last_name, date_of_birth, email)
@@ -41,13 +43,21 @@ router.post('/customers', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'A customer with this email already exists' });
+    }
+    res.status(500).json({ error: 'Something went wrong creating the customer' });
   }
 });
 
 // --- Add a vehicle for a customer ---
 router.post('/vehicles', async (req, res) => {
-  const { customer_id, make, model, year, value } = req.body;
+  const parsed = vehicleSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { customer_id, make, model, year, value } = parsed.data;
+
   try {
     const result = await pool.query(
       `INSERT INTO vehicles (customer_id, make, model, year, value)
@@ -56,13 +66,21 @@ router.post('/vehicles', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.code === '23503') {
+      return res.status(404).json({ error: 'No customer exists with that customer_id' });
+    }
+    res.status(500).json({ error: 'Something went wrong adding the vehicle' });
   }
 });
 
 // --- Get a quote (no database write, just calculates) ---
 router.post('/quote', async (req, res) => {
-  const { customer_id, vehicle_id, coverage_type } = req.body;
+  const parsed = quoteSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { customer_id, vehicle_id, coverage_type } = parsed.data;
+
   try {
     const customerResult = await pool.query('SELECT * FROM customers WHERE id = $1', [customer_id]);
     const vehicleResult = await pool.query('SELECT * FROM vehicles WHERE id = $1', [vehicle_id]);
@@ -83,13 +101,18 @@ router.post('/quote', async (req, res) => {
 
     res.json({ coverage_type, monthly_premium: premium });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: 'Something went wrong calculating the quote' });
   }
 });
 
 // --- Purchase a policy (creates the actual policy record) ---
 router.post('/policies', async (req, res) => {
-  const { customer_id, vehicle_id, coverage_type, monthly_premium } = req.body;
+  const parsed = policySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.issues[0].message });
+  }
+  const { customer_id, vehicle_id, coverage_type, monthly_premium } = parsed.data;
+
   try {
     const result = await pool.query(
       `INSERT INTO policies (customer_id, vehicle_id, coverage_type, monthly_premium)
@@ -98,7 +121,10 @@ router.post('/policies', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.code === '23503') {
+      return res.status(404).json({ error: 'No customer or vehicle exists with that id' });
+    }
+    res.status(500).json({ error: 'Something went wrong creating the policy' });
   }
 });
 
@@ -111,7 +137,7 @@ router.get('/customers/:id/policies', async (req, res) => {
     );
     res.json(result.rows);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: 'Something went wrong fetching policies' });
   }
 });
 
