@@ -1,3 +1,5 @@
+const { customerSchema, vehicleSchema, quoteSchema, policySchema } = require('../validation');
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
@@ -32,7 +34,12 @@ function calculatePremium(dateOfBirth, vehicleYear, vehicleValue, coverageType) 
 
 // --- Create a customer ---
 router.post('/customers', async (req, res) => {
-  const { first_name, last_name, date_of_birth, email } = req.body;
+  const parsed = customerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.errors[0].message });
+  }
+  const { first_name, last_name, date_of_birth, email } = parsed.data;
+
   try {
     const result = await pool.query(
       `INSERT INTO customers (first_name, last_name, date_of_birth, email)
@@ -41,7 +48,10 @@ router.post('/customers', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'A customer with this email already exists' });
+    }
+    res.status(500).json({ error: 'Something went wrong creating the customer' });
   }
 });
 
