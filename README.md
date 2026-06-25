@@ -4,6 +4,8 @@ A REST API for managing auto insurance customers, vehicles, and policies — inc
 
 Built as a portfolio project to demonstrate backend API design, relational database modeling, and business logic implementation in Node.js.
 
+**Live demo:** https://insurance-api-7fek.onrender.com (hosted on Render free tier — may take 30-50 seconds to wake up if it's been idle)
+
 ## What it does
 
 - Create customers and their vehicles
