@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { customerSchema, vehicleSchema, quoteSchema, policySchema } = require('../validation');
+const { getRecommendation } = require('../services');
 
 // --- Premium calculation logic ---
 function calculatePremium(dateOfBirth, vehicleYear, vehicleValue, coverageType) {
@@ -47,6 +48,49 @@ router.post('/customers', async (req, res) => {
       return res.status(409).json({ error: 'A customer with this email already exists' });
     }
     res.status(500).json({ error: 'Something went wrong creating the customer' });
+  }
+});
+
+// --- Get an AI-generated recommendation based on real premium data ---
+router.post('/recommend', async (req, res) => {
+  const { customer_id, vehicle_id, situation_description } = req.body;
+
+  if (!situation_description || typeof situation_description !== 'string') {
+    return res.status(400).json({ error: 'situation_description is required' });
+  }
+
+  try {
+    const customerResult = await pool.query('SELECT * FROM customers WHERE id = $1', [customer_id]);
+    const vehicleResult = await pool.query('SELECT * FROM vehicles WHERE id = $1', [vehicle_id]);
+
+    if (!customerResult.rows[0] || !vehicleResult.rows[0]) {
+      return res.status(404).json({ error: 'Customer or vehicle not found' });
+    }
+
+    const customer = customerResult.rows[0];
+    const vehicle = vehicleResult.rows[0];
+    const age = Math.floor(
+      (Date.now() - new Date(customer.date_of_birth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+    );
+
+    const premiumsByType = {
+      liability: calculatePremium(customer.date_of_birth, vehicle.year, parseFloat(vehicle.value), 'liability'),
+      collision: calculatePremium(customer.date_of_birth, vehicle.year, parseFloat(vehicle.value), 'collision'),
+      full: calculatePremium(customer.date_of_birth, vehicle.year, parseFloat(vehicle.value), 'full'),
+    };
+
+    const recommendation = await getRecommendation({
+      situationDescription: situation_description,
+      age,
+      vehicleYear: vehicle.year,
+      vehicleValue: vehicle.value,
+      premiumsByType,
+    });
+
+    res.json({ premiums: premiumsByType, recommendation });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Something went wrong generating a recommendation' });
   }
 });
 
