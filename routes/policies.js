@@ -185,4 +185,27 @@ router.get('/customers/:id/policies', async (req, res) => {
   }
 });
 
+// --- List all customers ---
+router.get('/customers', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM customers ORDER BY id');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Something went wrong fetching customers' });
+  }
+});
+
+// --- List all vehicles for a customer ---
+router.get('/customers/:id/vehicles', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM vehicles WHERE customer_id = $1',
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Something went wrong fetching vehicles' });
+  }
+});
+
 module.exports = router;
