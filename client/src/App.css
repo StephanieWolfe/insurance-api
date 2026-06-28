@@ -15,7 +15,7 @@ body {
 }
 
 .app-header {
-  background-color: #1A2B3C;
+  background: linear-gradient(135deg, #1A2B3C 0%, #2C4A6B 100%);
   color: white;
   padding: 24px 32px;
   text-align: center;
