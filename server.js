@@ -1,7 +1,9 @@
+const cors = require('cors');
 const express = require('express');
 const policiesRouter = require('./routes/policies');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
