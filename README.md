@@ -1,26 +1,34 @@
-# Insurance Quote API
+# Insurance Quote App
 
-A REST API for managing auto insurance customers, vehicles, and policies — including a rules-based premium calculation engine.
+A full-stack auto insurance application — REST API plus a React frontend — for managing customers, vehicles, and policies, including a rules-based premium calculation engine and an AI-powered coverage recommendation feature.
 
-Built as a portfolio project to demonstrate backend API design, relational database modeling, and business logic implementation in Node.js.
+Built as a portfolio project to demonstrate full-stack development: REST API design, relational database modeling, business logic implementation, frontend integration, and grounded LLM use.
 
-**Live demo:** https://insurance-api-7fek.onrender.com (hosted on Render free tier — may take 30-50 seconds to wake up if it's been idle)
+**Live app:** https://insurance-api-client.onrender.com
+**Live API:** https://insurance-api-7fek.onrender.com
+
+(Both hosted on Render's free tier — may take 30-50 seconds to wake up if idle.)
 
 ## What it does
 
-- Create customers and their vehicles
-- Generate a real-time insurance quote based on rating factors (age, vehicle age, vehicle value, coverage type)
-- Purchase a policy and store it
-- Look up all policies for a given customer
+- Customer-facing flow: enter your info and vehicle, get a real-time quote, get an AI-generated coverage recommendation, and purchase a policy
+- Admin view: browse all customers and look up their vehicles and policies
+- Rules-based premium calculation based on driver age, vehicle age, vehicle value, and coverage type
 
 ## Tech stack
 
+**Backend**
 - **Node.js / Express** — REST API server
 - **PostgreSQL** (hosted on [Neon](https://neon.tech)) — relational database
 - **pg** — PostgreSQL driver for Node
 - **Zod** — request validation and structured error handling
 - **Anthropic API (Claude)** — AI-generated coverage recommendations, grounded in real calculated data
 - **dotenv** — environment variable management
+
+**Frontend**
+- **React** (Vite) — single-page app
+- **react-markdown** — renders AI recommendation responses with proper formatting
+- Plain CSS, no UI framework
 
 ## Premium calculation logic
 
@@ -125,12 +133,29 @@ npm run dev
 
 Server runs on `http://localhost:3000`.
 
+### Frontend
+
+```bash
+cd client
+npm install
+```
+
+Create a `.env` file in `client/` with:
+```
+VITE_API_URL=http://localhost:3000/api
+```
+
+```bash
+npm run dev
+```
+
+Frontend runs on `http://localhost:5173`.
+
 ## Background
 
-Built while transitioning from an IT leadership role back into hands-on software engineering, as a way to get current with modern backend practices (REST API design, relational schema design, Git workflows, cloud-hosted databases, LLM integration) after several years split between coding and team management.
+Built while transitioning from an IT leadership role back into hands-on software engineering, as a way to get current with modern full-stack practices (REST API design, relational schema design, React, Git workflows, cloud-hosted databases and deployment, LLM integration) after several years split between coding and team management.
 
 ## Roadmap
 
 - [ ] Authentication
 - [ ] Unit tests
-- [ ] Frontend client
