@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import API_BASE from '../api';
+import ReactMarkdown from 'react-markdown';
 
 function CustomerForm() {
   const [customer, setCustomer] = useState({
@@ -224,7 +225,7 @@ function CustomerForm() {
 
           {recommendation && (
             <div className="recommendation">
-              <p>{recommendation.recommendation}</p>
+              <ReactMarkdown>{recommendation.recommendation}</ReactMarkdown>
             </div>
           )}
         </div>
